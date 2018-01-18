@@ -1,7 +1,7 @@
 {
   "name": "couch-aws-logs",
   "version": "1.0.0-alpha",
-  "description": "",
+  "description": "Feeds metrics from a CouchDB instance to AWS CloudWatch.",
   "main": "index.js",
   "bin": "bin.js",
   "scripts": {
