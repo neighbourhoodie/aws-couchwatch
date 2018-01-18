@@ -138,7 +138,58 @@ module.exports = class AWSCouchWatcher extends EventEmitter {
   }
 
   formatMetricData (key, data) {
-    throw new Error('Not implemented.')
+    function formatDimensions (key, data) {
+      if (data instanceof Object) {
+        return Object.keys(data).map((_key) => {
+          const innerKey = [key, _key].join('.')
+          const innerData = data[_key]
+          return formatDimensions(innerKey, innerData)
+        }).reduce((a, b) => {
+          return a.concat(b)
+        }, [])
+      } else {
+        let dataString = (typeof data === 'string')
+          ? data
+          : String(data)
+        return [{
+          Name: key,
+          Value: dataString
+        }]
+      }
+    }
+    var MetricData
+    if (data instanceof Array) {
+      MetricData = [{
+        MetricName: key,
+        StorageResolution: Math.floor(this.interval / 1000),
+        Timestamp: new Date(),
+        Dimensions: data.map((_key) => {
+          return {
+            Name: _key,
+            Value: 'ok'
+          }
+        })
+      }]
+    } else {
+      MetricData = Object.keys(data).map((_key) => {
+        let _data = data[_key]
+        let metric = {
+          MetricName: _key,
+          StorageResolution: Math.floor(this.interval / 1000),
+          Timestamp: new Date()
+        }
+        if (_data instanceof Object) {
+          metric.Dimensions = formatDimensions(_key, _data)
+        } else {
+          metric.Value = _data
+        }
+        return metric
+      })
+    }
+    return {
+      Namespace: key,
+      MetricData
+    }
   }
 
   putMetricData ({ MetricData, Namespace }) {
@@ -169,18 +220,20 @@ module.exports = class AWSCouchWatcher extends EventEmitter {
         MetricName,
         StatisticValues,
         StorageResolution,
-        // TODO Timestamp,
+        Timestamp,
         Unit,
         Value
       } = params
       // metric name
       assert.equal(typeof MetricName, 'string')
       // dimensions
-      assert(Dimensions instanceof Array)
-      Dimensions.forEach(function ({ Name, Value }) {
-        assert.equal(typeof Name, 'string')
-        assert.equal(typeof Value, 'string')
-      })
+      if (Dimensions) {
+        assert(Dimensions instanceof Array)
+        Dimensions.forEach(function ({ Name, Value }) {
+          assert.equal(typeof Name, 'string')
+          assert.equal(typeof Value, 'string')
+        })
+      }
       // stat values
       if (StatisticValues) {
         assert(StatisticValues instanceof Array)
@@ -196,11 +249,19 @@ module.exports = class AWSCouchWatcher extends EventEmitter {
       assert(typeof StorageResolution, 'number')
       assert(StorageResolution <= 60)
       assert(StorageResolution >= 1)
-      // TODO Timestamp
+      // Timestamp
+      if (Timestamp) {
+        let date = Date.parse(Timestamp)
+        assert.equal(isNaN(date), false)
+      }
       // units
-      assert(VALID_UNITS.includes(Unit))
+      if (Unit) assert(VALID_UNITS.includes(Unit))
       // values
-      assert.equal(typeof Value, 'number')
+      if (Value) {
+        assert.equal(typeof Value, 'number')
+      }
+      // other
+      assert(!((Value === undefined) && (Dimensions === undefined)), 'Requires either a value or dimensions.')
     })
   }
 }

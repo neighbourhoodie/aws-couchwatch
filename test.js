@@ -8,7 +8,7 @@ const URL = 'http://admin:password@localhost:5984'
 
 describe('aws-couch-watcher', function () {
   before(function () {
-    this.logger = new AWSCouchWatcher({ url: URL, interval: 500 })
+    this.logger = new AWSCouchWatcher({ url: URL, interval: 1000 })
   })
 
   it('should determine correct endpoints', async function () {
