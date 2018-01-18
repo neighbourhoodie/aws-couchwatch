@@ -5,6 +5,14 @@ const CloudWatch = require('aws-sdk/clients/cloudwatch')
 const request = require('request')
 const { EventEmitter } = require('events')
 
+function log () {
+  let msg = arguments[0]
+  arguments[0] = '[couch-aws-logs] ' + msg
+  if (process.env.DEBUG || process.env.LOG) {
+    console.log.apply(console, arguments)
+  }
+}
+
 const VALID_UNITS = [
   'Seconds',
   'Microseconds',
@@ -57,6 +65,7 @@ module.exports = class AWSCouchWatcher extends EventEmitter {
    * @return {Promise} Resolves once this.endpoints has been fully populated.
    */
   setup () {
+    log('Setting up...')
     const handle2x = (nodes) => {
       nodes.forEach((node) => {
         ENDPOINTS.forEach((endpoint) => {
@@ -81,6 +90,8 @@ module.exports = class AWSCouchWatcher extends EventEmitter {
           if (err.status === 404) {
             // catch 1.x behavior
             handle1x()
+            log('Set up to handle 1.x instance.')
+            return resolve()
           } else {
             return reject(err)
           }
@@ -88,15 +99,18 @@ module.exports = class AWSCouchWatcher extends EventEmitter {
           // handle 2.x
           const result = JSON.parse(body)
           handle2x(result.all_nodes)
-          resolve()
+          log('Set up to handle 2.x instance.')
+          return resolve()
         }
       })
     })
   }
 
   start () {
+    log('Starting...')
     return new Promise((resolve, reject) => {
       this.runner = setInterval(() => {
+        log('Polling for metrics...')
         // get metrics
         this.getMetricData().then((result) => {
           const tasks = Object.keys(result).map((key) => {
@@ -106,6 +120,8 @@ module.exports = class AWSCouchWatcher extends EventEmitter {
             return this.putMetricData(metric)
           })
           return Promise.all(tasks)
+        }).then((result) => {
+          log('Posted metrics.')
         }).catch((e) => {
           this.stop()
           reject(e)

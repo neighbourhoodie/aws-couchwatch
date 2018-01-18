@@ -24,7 +24,6 @@ yargs
         .catch(console.error)
     }
   })
-  .config()
   .alias('help', 'h')
   .wrap(yargs.terminalWidth())
   .parse()
