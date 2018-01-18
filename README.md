@@ -10,7 +10,7 @@ npm i
 npm link
 ```
 
-Now you can run `couch-aws-logs` to begin post stats to AWS CloudWatch, provided you have credentials [already specified]().
+Now you can run `couch-aws-logs` to begin post stats to AWS CloudWatch, provided you have credentials [already specified](https://docs.aws.amazon.com/sdk-for-javascript/v2/developer-guide/loading-node-credentials-shared.html).
 
 For usage information, run `couch-aws-logs -h`.
 
