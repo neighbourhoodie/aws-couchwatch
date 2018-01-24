@@ -1,7 +1,7 @@
 'use strict'
 
 const assert = require('assert')
-const CloudWatch = require('aws-sdk/clients/cloudwatch')
+const AWS = require('aws-sdk')
 const request = require('request')
 const { EventEmitter } = require('events')
 
@@ -49,10 +49,12 @@ const ENDPOINTS = [
 ]
 
 module.exports = class AWSCouchWatcher extends EventEmitter {
-  constructor ({ url, interval }) {
+  constructor ({ url, interval, aws }) {
     super()
-    this.cloud = new CloudWatch()
+    if (aws) AWS.config.update(aws)
+    this.cloud = new AWS.CloudWatch()
     this.url = url
+    if (interval) assert(interval >= 1000)
     this.interval = interval || (30 * 1000)
     this.endpoints = {
       _all_dbs: [this.url, '_all_dbs'].join('/')
@@ -115,13 +117,18 @@ module.exports = class AWSCouchWatcher extends EventEmitter {
         this.getMetricData().then((result) => {
           const tasks = Object.keys(result).map((key) => {
             // format metrics
-            const metric = this.formatMetricData(key, result[key])
+            const metric = this.formatMetrics(key, result[key])
             // put metrics
-            return this.putMetricData(metric)
+            if (metric.MetricData.length) {
+              return this.putMetricData(metric)
+            } else {
+              return Promise.resolve()
+            }
           })
           return Promise.all(tasks)
         }).then((result) => {
           log('Posted metrics.')
+          this.emit('metrics')
         }).catch((e) => {
           this.stop()
           reject(e)
@@ -154,54 +161,30 @@ module.exports = class AWSCouchWatcher extends EventEmitter {
   }
 
   formatMetricData (key, data) {
-    function formatDimensions (key, data) {
-      if (data instanceof Object) {
-        return Object.keys(data).map((_key) => {
-          const innerKey = [key, _key].join('.')
-          const innerData = data[_key]
-          return formatDimensions(innerKey, innerData)
-        }).reduce((a, b) => {
-          return a.concat(b)
-        }, [])
-      } else {
-        let dataString = (typeof data === 'string')
-          ? data
-          : String(data)
-        return [{
-          Name: key,
-          Value: dataString
-        }]
-      }
-    }
-    var MetricData
-    if (data instanceof Array) {
-      MetricData = [{
-        MetricName: key,
-        StorageResolution: Math.floor(this.interval / 1000),
-        Timestamp: new Date(),
-        Dimensions: data.map((_key) => {
-          return {
-            Name: _key,
-            Value: 'ok'
-          }
-        })
-      }]
-    } else {
-      MetricData = Object.keys(data).map((_key) => {
-        let _data = data[_key]
-        let metric = {
-          MetricName: _key,
-          StorageResolution: Math.floor(this.interval / 1000),
-          Timestamp: new Date()
-        }
-        if (_data instanceof Object) {
-          metric.Dimensions = formatDimensions(_key, _data)
-        } else {
-          metric.Value = _data
-        }
-        return metric
+    const StorageResolution = Math.floor(this.interval / 1000)
+    const Timestamp = new Date()
+    var MetricData = []
+    if (data instanceof Object) {
+      MetricData = Object.keys(data).map((innerKey) => {
+        const innerData = data[innerKey]
+        const MetricName = [key, innerKey].join('-')
+        return this.formatMetricData(MetricName, innerData)
       })
+    } else if (data instanceof Number) {
+      MetricData.push({
+        MetricName: key,
+        StorageResolution,
+        Timestamp,
+        Value: data
+      })
+    } else if (data instanceof Array) {
+
     }
+    return MetricData.reduce((a, b) => { return a.concat(b) }, [])
+  }
+
+  formatMetrics (key, data) {
+    const MetricData = this.formatMetricData(key, data)
     return {
       Namespace: key,
       MetricData
@@ -210,9 +193,10 @@ module.exports = class AWSCouchWatcher extends EventEmitter {
 
   putMetricData ({ MetricData, Namespace }) {
     return new Promise((resolve, reject) => {
+      const data = { MetricData, Namespace }
       // quit early if invalid
       try {
-        this.validateData({ MetricData, Namespace })
+        this.validateData(data)
       } catch (e) {
         return reject(e)
       }
@@ -220,7 +204,6 @@ module.exports = class AWSCouchWatcher extends EventEmitter {
       const callback = function (err, res) {
         return err ? reject(err) : resolve(res)
       }
-      const data = { MetricData, Namespace }
       this.cloud.putMetricData(data, callback)
     })
   }

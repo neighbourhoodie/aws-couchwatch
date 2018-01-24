@@ -4,11 +4,21 @@
 const assert = require('assert')
 const AWSCouchWatcher = require('.')
 
-const URL = 'http://admin:password@localhost:5984'
+const url = 'http://admin:password@localhost:5984'
+const interval = 1000
 
 describe('aws-couch-watcher', function () {
   before(function () {
-    this.logger = new AWSCouchWatcher({ url: URL, interval: 1000 })
+    this.logger = new AWSCouchWatcher({
+      url,
+      interval,
+      // region is not properly set by aws-sdk
+      // so we have to be explicit
+      // https://stackoverflow.com/questions/31039948/configuring-region-in-node-js-aws-sdk
+      aws: {
+        region: 'us-east-1'
+      }
+    })
   })
 
   it('should determine correct endpoints', async function () {
@@ -20,19 +30,23 @@ describe('aws-couch-watcher', function () {
     assert(Object.keys(this.logger.endpoints).length > Object.keys(preEndpoints).length)
   })
 
-  it('should get metrics', async function () {
-    const result = await this.logger.getMetricData()
-    assert(result instanceof Object)
-    assert(Object.keys(result).includes('_all_dbs'))
+  it('should get metrics', function () {
+    return this.logger.getMetricData().then((result) => {
+      assert(result instanceof Object)
+      assert(Object.keys(result).includes('_all_dbs'))
+    })
   })
 
   it('should run', function () {
     return new Promise((resolve, reject) => {
-      this.logger.start().catch(reject)
-      setTimeout(() => {
+      this.logger.start().catch((err) => {
+        console.log(err)
+        reject(err)
+      })
+      this.logger.once('metrics', (metrics) => {
         this.logger.stop()
         resolve()
-      }, this.logger.interval * 1.5)
+      })
     })
   })
 })
