@@ -43,7 +43,7 @@ describe('aws-couch-watcher', function () {
   })
 
   it('should run', function () {
-    this.timeout(120000)
+    this.timeout(20000)
     return new Promise((resolve, reject) => {
       this.logger.start().catch((err) => {
         console.log(err)

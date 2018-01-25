@@ -118,7 +118,10 @@ module.exports = class AWSCouchWatcher extends EventEmitter {
           const metric = this.formatMetrics(key, result[key])
           // put metrics
           if (metric.MetricData.length) {
-            return this.putMetricData(metric)
+            return this.putMetricData(metric).catch((e) => {
+              console.error(metric)
+              throw e
+            })
           } else {
             return Promise.resolve()
           }
@@ -128,10 +131,11 @@ module.exports = class AWSCouchWatcher extends EventEmitter {
         const responses = result.reduce((a, b) => {
           return a.concat(b)
         }, [])
-        log('Posted metrics.')
+        log('Posted metrics:')
+        log(JSON.stringify(responses))
         this.emit('metrics', responses)
       }).catch((e) => {
-        console.log(e)
+        console.trace(e)
         this.stop()
       })
     }
@@ -174,17 +178,17 @@ module.exports = class AWSCouchWatcher extends EventEmitter {
         const MetricName = [key, innerKey].join('-')
         return this.formatMetricData(MetricName, innerData)
       })
+    } else if (data instanceof Array) {
+      MetricData = data.map((data) => {
+        const MetricName = [key, data].join('-')
+        return this.formatMetricData(MetricName, data)
+      })
     } else if (data instanceof Number) {
       MetricData.push({
         MetricName: key,
         StorageResolution,
         Timestamp,
         Value: data
-      })
-    } else if (data instanceof Array) {
-      MetricData = data.map((data) => {
-        const MetricName = [key, data].join('-')
-        return this.formatMetricData(MetricName, data)
       })
     } else {
       const Value = (typeof data === 'number') ? data : 1
