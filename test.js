@@ -16,7 +16,7 @@ describe('aws-couch-watcher', function () {
       // so we have to be explicit
       // https://stackoverflow.com/questions/31039948/configuring-region-in-node-js-aws-sdk
       aws: {
-        region: 'us-east-2'
+        region: process.env.AWS_REGION || 'us-east-2'
       }
     })
   })
