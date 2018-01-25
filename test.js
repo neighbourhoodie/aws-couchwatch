@@ -1,11 +1,11 @@
-/* global describe, it, before */
+/* global describe, it, before, after */
 'use strict'
 
 const assert = require('assert')
 const AWSCouchWatcher = require('.')
 
 const url = 'http://admin:password@localhost:5984'
-const interval = 10000
+const interval = 60000
 
 describe('aws-couch-watcher', function () {
   before(function () {
@@ -16,9 +16,14 @@ describe('aws-couch-watcher', function () {
       // so we have to be explicit
       // https://stackoverflow.com/questions/31039948/configuring-region-in-node-js-aws-sdk
       aws: {
-        region: 'us-east-1'
+        region: 'us-east-2'
       }
     })
+  })
+
+  after(function () {
+    this.logger.stop()
+    process.exit(0)
   })
 
   it('should determine correct endpoints', async function () {
@@ -45,7 +50,7 @@ describe('aws-couch-watcher', function () {
         reject(err)
       })
       this.logger.once('metrics', (metrics) => {
-        this.logger.stop()
+        console.log(metrics)
         resolve()
       })
     })

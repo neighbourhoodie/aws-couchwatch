@@ -125,8 +125,11 @@ module.exports = class AWSCouchWatcher extends EventEmitter {
         })
         return Promise.all(tasks)
       }).then((result) => {
+        const responses = result.reduce((a, b) => {
+          return a.concat(b)
+        }, [])
         log('Posted metrics.')
-        this.emit('metrics')
+        this.emit('metrics', responses)
       }).catch((e) => {
         console.log(e)
         this.stop()
@@ -162,7 +165,7 @@ module.exports = class AWSCouchWatcher extends EventEmitter {
   }
 
   formatMetricData (key, data) {
-    const StorageResolution = Math.min(Math.floor(this.interval / 1000), 60)
+    const StorageResolution = 60 // regardless of collection rate
     const Timestamp = new Date()
     var MetricData = []
     if (data instanceof Object) {
@@ -269,8 +272,7 @@ module.exports = class AWSCouchWatcher extends EventEmitter {
       }
       // storage resolution
       assert(typeof StorageResolution, 'number')
-      assert(StorageResolution <= 60)
-      assert(StorageResolution >= 1)
+      assert((StorageResolution === 60) || (StorageResolution === 1))
       // Timestamp
       if (Timestamp) {
         let date = Date.parse(Timestamp)
