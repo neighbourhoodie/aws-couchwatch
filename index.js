@@ -109,31 +109,32 @@ module.exports = class AWSCouchWatcher extends EventEmitter {
   }
 
   start () {
-    log('Starting...')
-    return new Promise((resolve, reject) => {
-      this.runner = setInterval(() => {
-        log('Polling for metrics...')
-        // get metrics
-        this.getMetricData().then((result) => {
-          const tasks = Object.keys(result).map((key) => {
-            // format metrics
-            const metric = this.formatMetrics(key, result[key])
-            // put metrics
-            if (metric.MetricData.length) {
-              return this.putMetricData(metric)
-            } else {
-              return Promise.resolve()
-            }
-          })
-          return Promise.all(tasks)
-        }).then((result) => {
-          log('Posted metrics.')
-          this.emit('metrics')
-        }).catch((e) => {
-          this.stop()
-          reject(e)
+    const _main = () => {
+      log('Polling for metrics...')
+      // get metrics
+      return this.getMetricData().then((result) => {
+        const tasks = Object.keys(result).map((key) => {
+          // format metrics
+          const metric = this.formatMetrics(key, result[key])
+          // put metrics
+          if (metric.MetricData.length) {
+            return this.putMetricData(metric)
+          } else {
+            return Promise.resolve()
+          }
         })
-      }, this.interval)
+        return Promise.all(tasks)
+      }).then((result) => {
+        log('Posted metrics.')
+        this.emit('metrics')
+      }).catch((e) => {
+        console.log(e)
+        this.stop()
+      })
+    }
+    log('Starting...')
+    return _main().then(() => {
+      this.runner = setInterval(_main, this.interval)
     })
   }
 
@@ -161,7 +162,7 @@ module.exports = class AWSCouchWatcher extends EventEmitter {
   }
 
   formatMetricData (key, data) {
-    const StorageResolution = Math.floor(this.interval / 1000)
+    const StorageResolution = Math.min(Math.floor(this.interval / 1000), 60)
     const Timestamp = new Date()
     var MetricData = []
     if (data instanceof Object) {
@@ -178,7 +179,18 @@ module.exports = class AWSCouchWatcher extends EventEmitter {
         Value: data
       })
     } else if (data instanceof Array) {
-
+      MetricData = data.map((data) => {
+        const MetricName = [key, data].join('-')
+        return this.formatMetricData(MetricName, data)
+      })
+    } else {
+      const Value = (typeof data === 'number') ? data : 1
+      MetricData.push({
+        MetricName: key,
+        StorageResolution,
+        Timestamp,
+        Value
+      })
     }
     return MetricData.reduce((a, b) => { return a.concat(b) }, [])
   }
@@ -191,21 +203,32 @@ module.exports = class AWSCouchWatcher extends EventEmitter {
     }
   }
 
-  putMetricData ({ MetricData, Namespace }) {
-    return new Promise((resolve, reject) => {
-      const data = { MetricData, Namespace }
-      // quit early if invalid
-      try {
-        this.validateData(data)
-      } catch (e) {
-        return reject(e)
+  async putMetricData ({ MetricData, Namespace }) {
+    const MAX_SIZE = 20
+    if (MetricData.length > MAX_SIZE) {
+      let results = []
+      for (let i = 0; i < MetricData.length; i += MAX_SIZE) {
+        let subset = MetricData.slice(i, i + MAX_SIZE)
+        const result = await this.putMetricData({ Namespace, MetricData: subset })
+        results.push(result)
       }
-      // put the metric data
-      const callback = function (err, res) {
-        return err ? reject(err) : resolve(res)
-      }
-      this.cloud.putMetricData(data, callback)
-    })
+      return Promise.resolve(results)
+    } else {
+      return new Promise((resolve, reject) => {
+        const data = { MetricData, Namespace }
+        // quit early if invalid
+        try {
+          this.validateData(data)
+        } catch (e) {
+          return reject(e)
+        }
+        // put the metric data
+        const callback = function (err, res) {
+          return err ? reject(err) : resolve(res)
+        }
+        this.cloud.putMetricData(data, callback)
+      })
+    }
   }
 
   validateData ({ MetricData, Namespace }) {

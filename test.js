@@ -5,7 +5,7 @@ const assert = require('assert')
 const AWSCouchWatcher = require('.')
 
 const url = 'http://admin:password@localhost:5984'
-const interval = 1000
+const interval = 10000
 
 describe('aws-couch-watcher', function () {
   before(function () {
@@ -38,6 +38,7 @@ describe('aws-couch-watcher', function () {
   })
 
   it('should run', function () {
+    this.timeout(120000)
     return new Promise((resolve, reject) => {
       this.logger.start().catch((err) => {
         console.log(err)
