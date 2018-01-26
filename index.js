@@ -7,7 +7,7 @@ const { EventEmitter } = require('events')
 
 function log () {
   let msg = arguments[0]
-  arguments[0] = '[couch-aws-logs] ' + msg
+  arguments[0] = '[aws-couchwatch] ' + msg
   if (process.env.DEBUG || process.env.LOG) {
     console.log.apply(console, arguments)
   }
@@ -81,7 +81,7 @@ module.exports = class AWSCouchWatcher extends EventEmitter {
     }
 
     const handle1x = () => {
-      ENDPOINTS.map((endpoint) => {
+      ENDPOINTS.forEach((endpoint) => {
         this.endpoints[endpoint] = [this.url, endpoint].join('/')
       })
     }
@@ -91,7 +91,7 @@ module.exports = class AWSCouchWatcher extends EventEmitter {
       const membership = [this.url, '_membership'].join('/')
       request.get(membership, (err, res, body) => {
         if (err) {
-          if (err.status === 404) {
+          if (err.status === 404 || (err.error && (err.error === 'illegal_database_name'))) {
             // catch 1.x behavior
             handle1x()
             log('Set up to handle 1.x instance.')
@@ -178,7 +178,7 @@ module.exports = class AWSCouchWatcher extends EventEmitter {
       MetricData = Object.keys(data).map((innerKey) => {
         const innerData = data[innerKey]
         const MetricName = [key, innerKey].join('-')
-        if (innerData.value) {
+        if (innerData && innerData.value) {
           return this.formatMetricData(MetricName, innerData.value)
         } else {
           return this.formatMetricData(MetricName, innerData)
