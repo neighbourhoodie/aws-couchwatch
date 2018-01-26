@@ -88,8 +88,11 @@ module.exports = class AWSCouchWatcher extends EventEmitter {
       // check membership
       const membership = [this.url, '_membership'].join('/')
       request.get(membership, (err, res, body) => {
-        if (err) {
-          if (err.status === 404) {
+        if (typeof body === 'string') body = JSON.parse(body)
+        if (err || body.error) {
+          if (body.error) err = body
+          console.log((err.error && (err.error === 'illegal_database_name')))
+          if (err.status === 404 || (err.error && (err.error === 'illegal_database_name'))) {
             // catch 1.x behavior
             handle1x()
             log('Set up to handle 1.x instance.')
