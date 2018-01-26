@@ -25,10 +25,15 @@ require('yargs')
         interval: (argv.interval * 1000),
         url: argv.url
       })
+      watcher.on('metrics', (responses) => {
+        console.log('Metrics received:')
+        console.log(responses)
+      })
       watcher
         .start()
-        .then(console.log)
-        .catch(console.error)
+        .catch(function (error) {
+          console.error(error)
+        })
     }
   })
   .alias('help', 'h')

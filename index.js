@@ -7,11 +7,13 @@ const { EventEmitter } = require('events')
 
 function log () {
   let msg = arguments[0]
-  arguments[0] = '[couch-aws-logs] ' + msg
+  arguments[0] = '[aws-couchwatch] ' + msg
   if (process.env.DEBUG || process.env.LOG) {
     console.log.apply(console, arguments)
   }
 }
+
+const Namespace = 'AWS-CouchDB'
 
 const VALID_UNITS = [
   'Seconds',
@@ -79,7 +81,7 @@ module.exports = class AWSCouchWatcher extends EventEmitter {
     }
 
     const handle1x = () => {
-      ENDPOINTS.map((endpoint) => {
+      ENDPOINTS.forEach((endpoint) => {
         this.endpoints[endpoint] = [this.url, endpoint].join('/')
       })
     }
@@ -91,7 +93,6 @@ module.exports = class AWSCouchWatcher extends EventEmitter {
         if (typeof body === 'string') body = JSON.parse(body)
         if (err || body.error) {
           if (body.error) err = body
-          console.log((err.error && (err.error === 'illegal_database_name')))
           if (err.status === 404 || (err.error && (err.error === 'illegal_database_name'))) {
             // catch 1.x behavior
             handle1x()
@@ -121,7 +122,10 @@ module.exports = class AWSCouchWatcher extends EventEmitter {
           const metric = this.formatMetrics(key, result[key])
           // put metrics
           if (metric.MetricData.length) {
-            return this.putMetricData(metric)
+            return this.putMetricData(metric).catch((e) => {
+              console.error(metric)
+              throw e
+            })
           } else {
             return Promise.resolve()
           }
@@ -131,10 +135,11 @@ module.exports = class AWSCouchWatcher extends EventEmitter {
         const responses = result.reduce((a, b) => {
           return a.concat(b)
         }, [])
-        log('Posted metrics.')
+        log('Posted metrics:')
+        log(JSON.stringify(responses))
         this.emit('metrics', responses)
       }).catch((e) => {
-        console.log(e)
+        console.trace(e)
         this.stop()
       })
     }
@@ -156,8 +161,8 @@ module.exports = class AWSCouchWatcher extends EventEmitter {
       return new Promise(function (resolve, reject) {
         request.get(url, function (err, res, body) {
           if (err) return reject(err)
-          // TODO emit?
           results[key] = JSON.parse(body)
+          log(key, results[key])
           return resolve()
         })
       })
@@ -173,9 +178,18 @@ module.exports = class AWSCouchWatcher extends EventEmitter {
     var MetricData = []
     if (data instanceof Object) {
       MetricData = Object.keys(data).map((innerKey) => {
-        const innerData = data[innerKey]
         const MetricName = [key, innerKey].join('-')
-        return this.formatMetricData(MetricName, innerData)
+        const innerData = data[innerKey]
+        if (innerData && innerData.value) {
+          return this.formatMetricData(MetricName, innerData.value)
+        } else {
+          return this.formatMetricData(MetricName, innerData)
+        }
+      })
+    } else if (data instanceof Array) {
+      MetricData = data.map((data) => {
+        const MetricName = [key, data].join('-')
+        return this.formatMetricData(MetricName, data)
       })
     } else if (data instanceof Number) {
       MetricData.push({
@@ -183,11 +197,6 @@ module.exports = class AWSCouchWatcher extends EventEmitter {
         StorageResolution,
         Timestamp,
         Value: data
-      })
-    } else if (data instanceof Array) {
-      MetricData = data.map((data) => {
-        const MetricName = [key, data].join('-')
-        return this.formatMetricData(MetricName, data)
       })
     } else {
       const Value = (typeof data === 'number') ? data : 1
@@ -203,10 +212,7 @@ module.exports = class AWSCouchWatcher extends EventEmitter {
 
   formatMetrics (key, data) {
     const MetricData = this.formatMetricData(key, data)
-    return {
-      Namespace: key,
-      MetricData
-    }
+    return { Namespace, MetricData }
   }
 
   async putMetricData ({ MetricData, Namespace }) {
