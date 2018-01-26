@@ -13,6 +13,8 @@ function log () {
   }
 }
 
+const Namespace = 'CouchDB'
+
 const VALID_UNITS = [
   'Seconds',
   'Microseconds',
@@ -176,7 +178,11 @@ module.exports = class AWSCouchWatcher extends EventEmitter {
       MetricData = Object.keys(data).map((innerKey) => {
         const innerData = data[innerKey]
         const MetricName = [key, innerKey].join('-')
-        return this.formatMetricData(MetricName, innerData)
+        if (innerData.value) {
+          return this.formatMetricData(MetricName, innerData.value)
+        } else {
+          return this.formatMetricData(MetricName, innerData)
+        }
       })
     } else if (data instanceof Array) {
       MetricData = data.map((data) => {
@@ -204,10 +210,7 @@ module.exports = class AWSCouchWatcher extends EventEmitter {
 
   formatMetrics (key, data) {
     const MetricData = this.formatMetricData(key, data)
-    return {
-      Namespace: key,
-      MetricData
-    }
+    return { Namespace, MetricData }
   }
 
   async putMetricData ({ MetricData, Namespace }) {
