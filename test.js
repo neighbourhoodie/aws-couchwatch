@@ -7,7 +7,7 @@ const AWSCouchWatcher = require('.')
 const url = 'http://admin:password@localhost:5984'
 const interval = 60000
 
-describe('aws-couch-watcher', function () {
+describe('aws-couchwatch', function () {
   before(function () {
     this.logger = new AWSCouchWatcher({
       url,
@@ -30,9 +30,12 @@ describe('aws-couch-watcher', function () {
     const preEndpoints = Object.assign({}, this.logger.endpoints)
     assert(preEndpoints instanceof Object)
     assert(Object.keys(preEndpoints).length > 0)
-    await this.logger.setup()
-    assert(this.logger.endpoints instanceof Object)
-    assert(Object.keys(this.logger.endpoints).length > Object.keys(preEndpoints).length)
+    return this.logger.setup().then(() => {
+      assert(this.logger.endpoints instanceof Object)
+      assert(Object.keys(this.logger.endpoints).length > Object.keys(preEndpoints).length)
+    }).catch((e) => {
+      console.log(e)
+    })
   })
 
   it('should get metrics', function () {

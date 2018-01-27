@@ -13,7 +13,7 @@ function log () {
   }
 }
 
-const Namespace = 'CouchDB'
+const Namespace = 'AWS-CouchDB'
 
 const VALID_UNITS = [
   'Seconds',
@@ -90,7 +90,10 @@ module.exports = class AWSCouchWatcher extends EventEmitter {
       // check membership
       const membership = [this.url, '_membership'].join('/')
       request.get(membership, (err, res, body) => {
-        if (err) {
+        if (typeof body === 'string') body = JSON.parse(body)
+        if (body.error) err = body
+        if (err || body.error) {
+          if (body.error) err = body
           if (err.status === 404 || (err.error && (err.error === 'illegal_database_name'))) {
             // catch 1.x behavior
             handle1x()
@@ -101,8 +104,7 @@ module.exports = class AWSCouchWatcher extends EventEmitter {
           }
         } else {
           // handle 2.x
-          const result = JSON.parse(body)
-          handle2x(result.all_nodes)
+          handle2x(body.all_nodes)
           log('Set up to handle 2.x instance.')
           return resolve()
         }
@@ -120,10 +122,7 @@ module.exports = class AWSCouchWatcher extends EventEmitter {
           const metric = this.formatMetrics(key, result[key])
           // put metrics
           if (metric.MetricData.length) {
-            return this.putMetricData(metric).catch((e) => {
-              console.error(metric)
-              throw e
-            })
+            return this.putMetricData(metric)
           } else {
             return Promise.resolve()
           }
@@ -159,7 +158,6 @@ module.exports = class AWSCouchWatcher extends EventEmitter {
       return new Promise(function (resolve, reject) {
         request.get(url, function (err, res, body) {
           if (err) return reject(err)
-          // TODO emit?
           results[key] = JSON.parse(body)
           return resolve()
         })
@@ -176,8 +174,8 @@ module.exports = class AWSCouchWatcher extends EventEmitter {
     var MetricData = []
     if (data instanceof Object) {
       MetricData = Object.keys(data).map((innerKey) => {
-        const innerData = data[innerKey]
         const MetricName = [key, innerKey].join('-')
+        const innerData = data[innerKey]
         if (innerData && innerData.value) {
           return this.formatMetricData(MetricName, innerData.value)
         } else {
