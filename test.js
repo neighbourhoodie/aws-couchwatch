@@ -4,7 +4,7 @@
 const assert = require('assert')
 const AWSCouchWatcher = require('.')
 
-const url = 'http://admin:password@localhost:5984'
+const url = process.env.COUCH_URL || 'http://admin:password@localhost:5984'
 const interval = 60000
 
 describe('aws-couchwatch', function () {
