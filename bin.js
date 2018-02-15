@@ -1,39 +1,49 @@
 #!/usr/bin/env node
 'use strict'
 
-const AWSCouchWatcher = require('.')
-const pkg = require('./package.json')
+const AWSCouchWatch = require('.')
+const { version } = require('./package.json')
+
+function scanWith (watcher) {
+  return watcher.scan().then(function (metrics) {
+    console.log('%i metrics received.', metrics.length)
+    return watcher.upload(metrics)
+  }).catch(function (error) {
+    console.error(error)
+  })
+}
 
 require('yargs')
-  .version(pkg.version)
+  .version(version)
   .option('url', {
-    alias: 'U',
-    description: 'URL for the CouchDB cluster to watch.',
+    alias: 'u',
+    description: 'URL for the CouchDB cluster to scan.',
     default: process.env.COUCH_URL || 'http://localhost:5984'
-  })
-  .option('interval', {
-    alias: 'I',
-    description: 'Interval between polling for metrics in seconds.',
-    default: 30
   })
   .command({
     command: '$0',
     aliases: ['start'],
-    description: '',
-    handler: function (argv) {
-      const watcher = new AWSCouchWatcher({
-        interval: (argv.interval * 1000),
-        url: argv.url
+    description: 'Periodically scan a CouchDB instance and upload the results to AWS CloudWatch.',
+    builder: function (yargs) {
+      yargs.option('interval', {
+        alias: 'i',
+        description: 'Interval between scanning for metrics in milliseconds.',
+        default: 60000 // one minute
       })
-      watcher.on('metrics', (responses) => {
-        console.log('Metrics received:')
-        console.log(responses)
-      })
-      watcher
-        .start()
-        .catch(function (error) {
-          console.error(error)
-        })
+    },
+    handler: function ({ url, interval }) {
+      const watcher = new AWSCouchWatch({ url })
+      setInterval(function () {
+        return scanWith(watcher)
+      }, interval)
+    }
+  })
+  .command({
+    command: 'scan',
+    description: 'Scan a CouchDB instance once and upload the results to AWS CloudWatch.',
+    handler: function ({ url }) {
+      const watcher = new AWSCouchWatch({ url })
+      scanWith(watcher)
     }
   })
   .alias('help', 'h')
