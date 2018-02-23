@@ -33,9 +33,11 @@ require('yargs')
     },
     handler: function ({ url, interval }) {
       const watcher = new AWSCouchWatch({ url })
-      setInterval(function () {
-        return scanWith(watcher)
-      }, interval)
+      watcher.setup().then(() => {
+        setInterval(function () {
+          return scanWith(watcher)
+        }, interval)
+      })
     }
   })
   .command({
@@ -43,7 +45,9 @@ require('yargs')
     description: 'Scan a CouchDB instance once and upload the results to AWS CloudWatch.',
     handler: function ({ url }) {
       const watcher = new AWSCouchWatch({ url })
-      scanWith(watcher)
+      watcher.setup().then(() => {
+        scanWith(watcher)
+      })
     }
   })
   .alias('help', 'h')
