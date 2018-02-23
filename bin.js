@@ -9,7 +9,8 @@ function scanWith (watcher) {
     console.log('%i metrics received.', metrics.length)
     return watcher.upload(metrics)
   }).catch(function (error) {
-    console.error(error)
+    console.log('Error encountered:')
+    console.trace(error)
   })
 }
 
