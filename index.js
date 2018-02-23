@@ -7,8 +7,8 @@ const Namespace = 'CouchWatch'
 const MAX_SIZE = 20
 
 class AWSCouchWatch extends CouchScan {
-  constructor ({ url, aws }) {
-    super({ url })
+  constructor ({ url, aws, scanDb }) {
+    super({ url, scanDb })
     if (aws) AWS.config.update(aws)
     this.cloud = new AWS.CloudWatch()
   }

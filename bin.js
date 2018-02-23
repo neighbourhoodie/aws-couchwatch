@@ -21,6 +21,11 @@ require('yargs')
     description: 'URL for the CouchDB cluster to scan.',
     default: process.env.COUCH_URL || 'http://localhost:5984'
   })
+  .option('scanDb', {
+    alias: 's',
+    description: 'Scan each database in addition to each node.',
+    default: false
+  })
   .command({
     command: '$0',
     aliases: ['start'],
@@ -32,8 +37,8 @@ require('yargs')
         default: 60000 // one minute
       })
     },
-    handler: function ({ url, interval }) {
-      const watcher = new AWSCouchWatch({ url })
+    handler: function ({ url, interval, scanDb }) {
+      const watcher = new AWSCouchWatch({ url, scanDb })
       watcher.setup().then(() => {
         setInterval(function () {
           return scanWith(watcher)
@@ -44,8 +49,8 @@ require('yargs')
   .command({
     command: 'scan',
     description: 'Scan a CouchDB instance once and upload the results to AWS CloudWatch.',
-    handler: function ({ url }) {
-      const watcher = new AWSCouchWatch({ url })
+    handler: function ({ url, scanDb }) {
+      const watcher = new AWSCouchWatch({ url, scanDb })
       watcher.setup().then(() => {
         scanWith(watcher)
       })
