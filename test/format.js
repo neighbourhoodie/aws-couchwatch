@@ -9,9 +9,14 @@ const DB = require('./fixtures/db.json')
 const STATS = require('./fixtures/stats.json')
 const SYSTEM = require('./fixtures/system.json')
 
-function validate ({ key, value }) {
+function validate ({ key, value, type }) {
+  if (key.indexOf('uptime') >= 0) {
+    // verify arbitrary type match
+    assert.equal(type, 'ms')
+  }
   assert.equal(typeof key, 'string')
   assert.equal(typeof value, 'number')
+  assert.equal(typeof type, 'string')
 }
 
 describe('formatDb', function () {

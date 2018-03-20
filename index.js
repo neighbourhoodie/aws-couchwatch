@@ -32,14 +32,21 @@ class AWSCouchWatch extends CouchScan {
   _upload (metrics) {
     const params = {
       Namespace,
-      MetricData: metrics.map(({ key, value }) => {
+      MetricData: metrics.map(({ key, value, type }) => {
         const MetricName = key
         const Value = value
-        return {
-          MetricName,
-          Timestamp: new Date(),
-          Value
+        var Unit
+        if (type === 'bytes') {
+          Unit = 'Bytes'
+        } else if (type === 'percent') {
+          Unit = 'Percent'
+        } else if (type === 'ms') {
+          Unit = 'Milliseconds'
+        } else {
+          Unit = 'Count'
         }
+        const Timestamp = new Date()
+        return { MetricName, Timestamp, Unit, Value }
       })
     }
 

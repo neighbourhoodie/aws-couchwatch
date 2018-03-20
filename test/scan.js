@@ -7,7 +7,7 @@ const CouchScan = require('../lib/scan')
 
 describe('CouchScan', function () {
   const url = process.env.COUCH_URL || 'http://localhost:5984'
-  const scanner = new CouchScan({ url })
+  const scanner = new CouchScan({ url, scanDb: true })
 
   it('should setup ok', function () {
     return scanner.setup().then(() => {
