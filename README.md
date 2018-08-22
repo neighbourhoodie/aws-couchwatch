@@ -33,10 +33,12 @@ Commands:
 Options:
   --help, -h      Show help                                            [boolean]
   --version       Show version number                                  [boolean]
-  --url, -u       URL for the CouchDB cluster to scan.
+  --url, -u       URL for the CouchDB cluster to scan. Defaults to the COUCH_URL
+                  environment variable.
                                [default: "http://admin:password@localhost:5984"]
   --scanDb, -s    Scan each database in addition to each node.  [default: false]
   --interval, -i  Interval between scanning for metrics in milliseconds.
+                                                                [default: 60000]
 ```
 
 ## License

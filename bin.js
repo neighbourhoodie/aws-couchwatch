@@ -18,7 +18,7 @@ require('yargs')
   .version(version)
   .option('url', {
     alias: 'u',
-    description: 'URL for the CouchDB cluster to scan.',
+    description: 'URL for the CouchDB cluster to scan. Defaults to the COUCH_URL environment variable.',
     default: process.env.COUCH_URL || 'http://localhost:5984'
   })
   .option('scanDb', {
