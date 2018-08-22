@@ -43,4 +43,4 @@ Options:
 
 ## License
 
-[Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0)
+Proprietary. Use with permission of [Neighbourhoodie GmbH](https://neighbourhood.ie/).
