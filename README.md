@@ -43,4 +43,6 @@ Options:
 
 ## License
 
-Proprietary. Use with permission of [Neighbourhoodie GmbH](https://neighbourhood.ie/).
+Apache 2.0
+
+(c) [Neighbourhoodie Software](https://neighbourhood.ie/).
