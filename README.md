@@ -1,3 +1,7 @@
+# NOTE: This is unmaintained, unsupported code.
+* It worked the last time we ran it.
+* PRs welcome, but we may not fix issues anytime soon.
+
 # aws-couchwatch
 
 Feeds metrics from a [CouchDB](https://couchdb.apache.org/) cluster to [AWS CloudWatch](https://aws.amazon.com/cloudwatch/).
