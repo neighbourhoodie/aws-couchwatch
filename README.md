@@ -41,6 +41,7 @@ Options:
                   environment variable.
                                [default: "http://admin:password@localhost:5984"]
   --scanDb, -s    Scan each database in addition to each node.  [default: false]
+  --namespace, -n  The CloudWatch Namespace to use
   --interval, -i  Interval between scanning for metrics in milliseconds.
                                                                 [default: 60000]
 ```

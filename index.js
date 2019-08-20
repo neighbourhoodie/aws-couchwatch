@@ -3,14 +3,15 @@
 const AWS = require('aws-sdk')
 const CouchScan = require('./lib/scan')
 
-const Namespace = 'CouchWatch'
+const DEFAULT_NAMESPACE = 'CouchWatch'
 const MAX_SIZE = 20
 
 class AWSCouchWatch extends CouchScan {
-  constructor ({ url, aws, scanDb }) {
+  constructor ({ url, aws, scanDb, namespace }) {
     super({ url, scanDb })
     if (aws) AWS.config.update(aws)
     this.cloud = new AWS.CloudWatch()
+    this.namespace = namespace || DEFAULT_NAMESPACE
   }
 
   upload (metrics) {
@@ -31,7 +32,7 @@ class AWSCouchWatch extends CouchScan {
 
   _upload (metrics) {
     const params = {
-      Namespace,
+      Namespace: this.namespace,
       MetricData: metrics.map(({ key, value, type }) => {
         const MetricName = key
         const Value = value
