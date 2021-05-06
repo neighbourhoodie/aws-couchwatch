@@ -26,6 +26,10 @@ require('yargs')
     description: 'Scan each database in addition to each node.',
     default: false
   })
+  .option('namespace', {
+    alias: 'n',
+    description: 'The CloudWatch Namespace to use'
+  })
   .command({
     command: '$0',
     aliases: ['start'],
@@ -37,8 +41,8 @@ require('yargs')
         default: 60000 // one minute
       })
     },
-    handler: function ({ url, interval, scanDb }) {
-      const watcher = new AWSCouchWatch({ url, scanDb })
+    handler: function ({ url, interval, scanDb, namespace }) {
+      const watcher = new AWSCouchWatch({ url, scanDb, namespace })
       watcher.setup().then(() => {
         setInterval(function () {
           return scanWith(watcher)
@@ -49,8 +53,8 @@ require('yargs')
   .command({
     command: 'scan',
     description: 'Scan a CouchDB instance once and upload the results to AWS CloudWatch.',
-    handler: function ({ url, scanDb }) {
-      const watcher = new AWSCouchWatch({ url, scanDb })
+    handler: function ({ url, scanDb, namespace }) {
+      const watcher = new AWSCouchWatch({ url, scanDb, namespace })
       watcher.setup().then(() => {
         scanWith(watcher)
       })
