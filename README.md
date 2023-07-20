@@ -24,6 +24,8 @@ For usage information, run `aws-couchwatch -h`.
 ## Usage
 
 ```
+# set the AWS_REGION env var to your target region
+
 aws-couchwatch
 
 Periodically scan a CouchDB instance and upload the results to AWS CloudWatch.

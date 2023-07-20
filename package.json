@@ -11,12 +11,12 @@
   "license": "Apache 2.0",
   "dependencies": {
     "aws-sdk": "^2.184.0",
-    "request": "^2.83.0",
-    "yargs": "^10.1.1"
+    "node-fetch": "^2.6.12",
+    "yargs": "^17.7.2"
   },
   "devDependencies": {
     "dependency-check": "^3.0.0",
     "mocha": "^5.0.0",
-    "standard": "^10.0.3"
+    "standard": "^17.1.0"
   }
 }
